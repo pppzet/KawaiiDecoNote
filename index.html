@@ -219,14 +219,15 @@
   .if-cond-text{
     flex:1; min-width:0; border:none; background:transparent; resize:none;
     font-family:'M PLUS Rounded 1c', sans-serif; font-size:14px; color:var(--ink); line-height:1.4;
-    min-height:20px; overflow:hidden;
+    min-height:20px; overflow:hidden; word-break:break-word; overflow-wrap:break-word;
   }
   .if-cond-text:focus{ outline:none; }
   .if-del-btn{ background:none; border:none; cursor:pointer; font-size:12px; color:#b5a8c4; flex:0 0 auto; padding:2px; }
   .if-del-btn:hover{ color:var(--plum); }
-  .if-branches{ display:flex; gap:10px; }
+  /* スマホ幅では常に「はい/いいえ」を縦積みにして、ネストが深くても横幅で潰れないようにする */
+  .if-branches{ display:flex; flex-direction:column; gap:8px; }
   .if-branch{
-    flex:1; min-width:0; background:rgba(255,255,255,.6); border-radius:12px;
+    width:100%; background:rgba(255,255,255,.6); border-radius:12px;
     padding:8px; display:flex; flex-direction:column; gap:6px;
   }
   .if-branch-label{
@@ -243,13 +244,28 @@
   .branch-step-text{
     flex:1; min-width:0; border:none; background:transparent; resize:none;
     font-family:'M PLUS Rounded 1c', sans-serif; font-size:12.5px; color:var(--ink); line-height:1.4;
-    overflow:hidden; min-height:18px;
+    overflow:hidden; min-height:18px; word-break:break-word; overflow-wrap:break-word;
   }
   .branch-step-text:focus{ outline:none; }
   .branch-step-del{ background:none; border:none; cursor:pointer; font-size:10px; color:#b5a8c4; flex:0 0 auto; padding:2px; }
   .branch-add{
     align-self:center; background:none; border:1px dashed rgba(155,130,180,.4); color:#9b7fb8;
     font-size:11px; border-radius:10px; padding:4px 10px; cursor:pointer;
+  }
+  .branch-add-row{ display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+  .nested-if-wrap{ margin:2px 0; }
+  .if-card .if-card{ padding:8px 10px 10px; background:#faf5ff; border-color:#c9a0d9; }
+  .if-card .if-card .if-card{ background:#f2f8ff; border-color:#a3c9e0; }
+  .if-card .if-card .if-branches{ gap:6px; }
+  .if-card .if-card .if-branch{ padding:6px; }
+  /* PC・タブレットなど横幅に余裕がある画面だけ、最上段のif分岐を左右並びにする */
+  @media (min-width:600px){
+    .if-card{ max-width:480px; }
+    .if-branches{ flex-direction:row; gap:10px; }
+    .if-branch{ flex:1; min-width:0; width:auto; }
+    /* 入れ子(2段目以降)は横幅が足りなくなるので、PCでも縦積みのままにする */
+    .if-card .if-card > .if-branches{ flex-direction:column; }
+    .if-card .if-card > .if-branches > .if-branch{ flex:none; width:100%; }
   }
   .if-cond-text-static{
     flex:1; min-width:0; font-family:'M PLUS Rounded 1c', sans-serif; font-size:14px; color:var(--ink);
@@ -799,17 +815,12 @@ function normalizeStep(step){
     if(!step.branches) step.branches={};
     if(!Array.isArray(step.branches.yes)) step.branches.yes=[];
     if(!Array.isArray(step.branches.no)) step.branches.no=[];
-    step.branches.yes.forEach(normalizeBranchStep);
-    step.branches.no.forEach(normalizeBranchStep);
+    step.branches.yes.forEach(normalizeStep);
+    step.branches.no.forEach(normalizeStep);
     if(!step.labels) step.labels={};
     if(!step.labels.yes) step.labels.yes='はい';
     if(!step.labels.no) step.labels.no='いいえ';
   }
-}
-function normalizeBranchStep(s){
-  if(!s.id) s.id=newId();
-  if(s.text===undefined) s.text='';
-  if(s.done===undefined) s.done=false;
 }
 function normalizePage(p){
   if(!p.type) p.type='flowchart';
@@ -870,14 +881,16 @@ async function loadState(){
     const n = parseInt((o.id||'').replace(/\D/g,''))||0;
     return Math.max(m,n);
   },0);
+  const maxNumSteps = (steps)=> (steps||[]).reduce((m,s)=>{
+    let n = Math.max(m, maxNum([s]));
+    if(s.branches) n = Math.max(n, maxNumSteps(s.branches.yes), maxNumSteps(s.branches.no));
+    return n;
+  },0);
   let mx = 0;
   state.notebooks.forEach(nb=>{
     mx = Math.max(mx, maxNum([nb]), maxNum(nb.pages||[]));
     nb.pages.forEach(p=>{
-      mx = Math.max(mx, maxNum(p.steps||[]), maxNum(p.stickers||[]), maxNum(p.shapes||[]));
-      (p.steps||[]).forEach(s=>{
-        if(s.branches) mx = Math.max(mx, maxNum(s.branches.yes||[]), maxNum(s.branches.no||[]));
-      });
+      mx = Math.max(mx, maxNumSteps(p.steps||[]), maxNum(p.stickers||[]), maxNum(p.shapes||[]));
     });
   });
   uid = mx + 1;
@@ -1304,11 +1317,7 @@ function addStep(){
 
 function addIfStep(){
   const cb = currentBoard();
-  cb.steps.push({
-    id:newId(), type:'if', text:'', done:false,
-    labels:{yes:'はい', no:'いいえ'},
-    branches:{yes:[], no:[]}
-  });
+  cb.steps.push(makeIfStep());
   renderSteps();
   saveNow();
   requestAnimationFrame(()=>{
@@ -1317,9 +1326,25 @@ function addIfStep(){
     if(last) last.focus();
   });
 }
+function makeIfStep(){
+  return { id:newId(), type:'if', text:'', done:false, labels:{yes:'はい', no:'いいえ'}, branches:{yes:[], no:[]} };
+}
+function makePlainStep(){
+  return { id:newId(), type:'step', text:'', done:false };
+}
 
+// 最上位(cb.steps直下)のif分岐カード。上下移動・削除ボタン付き
 function buildIfCard(step, idx){
   const cb = currentBoard();
+  return buildIfCardNode(step, {
+    onDelete: ()=>{ cb.steps.splice(idx,1); renderSteps(); saveNow(); },
+    onMoveUp: idx>0 ? ()=>moveStep(idx,-1) : null,
+    onMoveDown: idx<cb.steps.length-1 ? ()=>moveStep(idx,1) : null,
+  });
+}
+
+// if分岐カードの共通描画（トップレベルでも分岐の中(ネスト)でも使う再帰対応版）
+function buildIfCardNode(step, { onDelete, onMoveUp, onMoveDown }){
   const card = document.createElement('div');
   card.className = 'if-card';
 
@@ -1337,20 +1362,24 @@ function buildIfCard(step, idx){
   cond.addEventListener('input', ()=>{ step.text = cond.value; autoGrowCond(); scheduleSave(); });
   cond.addEventListener('blur', flushSave);
   setTimeout(autoGrowCond, 0);
+
   const actions = document.createElement('div');
   actions.className = 'step-actions';
-  const upBtn = document.createElement('button');
-  upBtn.className='icon-btn'; upBtn.textContent='▲';
-  upBtn.style.visibility = idx===0 ? 'hidden':'visible';
-  upBtn.onclick = ()=>{ moveStep(idx,-1); };
-  const downBtn = document.createElement('button');
-  downBtn.className='icon-btn'; downBtn.textContent='▼';
-  downBtn.style.visibility = idx===cb.steps.length-1 ? 'hidden':'visible';
-  downBtn.onclick = ()=>{ moveStep(idx,1); };
+  if(onMoveUp!==undefined){
+    const upBtn = document.createElement('button');
+    upBtn.className='icon-btn'; upBtn.textContent='▲';
+    upBtn.style.visibility = onMoveUp ? 'visible':'hidden';
+    upBtn.onclick = ()=>{ if(onMoveUp) onMoveUp(); };
+    const downBtn = document.createElement('button');
+    downBtn.className='icon-btn'; downBtn.textContent='▼';
+    downBtn.style.visibility = onMoveDown ? 'visible':'hidden';
+    downBtn.onclick = ()=>{ if(onMoveDown) onMoveDown(); };
+    actions.append(upBtn, downBtn);
+  }
   const delBtn = document.createElement('button');
   delBtn.className = 'if-del-btn'; delBtn.textContent = '✕';
-  delBtn.onclick = ()=>{ cb.steps.splice(idx,1); renderSteps(); saveNow(); };
-  actions.append(upBtn, downBtn, delBtn);
+  delBtn.onclick = onDelete;
+  actions.appendChild(delBtn);
   head.append(icon, cond, actions);
 
   const branchesWrap = document.createElement('div');
@@ -1373,15 +1402,18 @@ function buildBranchColumn(step, key){
   labelInput.addEventListener('blur', flushSave);
   col.appendChild(labelInput);
 
-  step.branches[key].forEach((bstep, bidx)=>{
-    col.appendChild(buildBranchStepCard(step, key, bstep, bidx));
+  const list = step.branches[key];
+  list.forEach((item, idx)=>{
+    col.appendChild(buildBranchItem(list, item, idx, col));
   });
 
-  const addBtn = document.createElement('button');
-  addBtn.className = 'branch-add';
-  addBtn.textContent = '＋';
-  addBtn.onclick = ()=>{
-    step.branches[key].push({ id:newId(), text:'', done:false });
+  const addRow = document.createElement('div');
+  addRow.className = 'branch-add-row';
+  const addStepBtn = document.createElement('button');
+  addStepBtn.className = 'branch-add';
+  addStepBtn.textContent = '＋工程';
+  addStepBtn.onclick = ()=>{
+    list.push(makePlainStep());
     renderSteps();
     saveNow();
     requestAnimationFrame(()=>{
@@ -1390,12 +1422,34 @@ function buildBranchColumn(step, key){
       if(last) last.focus();
     });
   };
-  col.appendChild(addBtn);
+  const addIfBtn = document.createElement('button');
+  addIfBtn.className = 'branch-add';
+  addIfBtn.textContent = '＋🔀if';
+  addIfBtn.onclick = ()=>{
+    list.push(makeIfStep());
+    renderSteps();
+    saveNow();
+  };
+  addRow.append(addStepBtn, addIfBtn);
+  col.appendChild(addRow);
 
   return col;
 }
 
-function buildBranchStepCard(step, key, bstep, bidx){
+// 分岐の中身は「工程カード」か「入れ子if分岐カード」のどちらか
+function buildBranchItem(list, item, idx){
+  if(item.type==='if'){
+    const wrap = document.createElement('div');
+    wrap.className = 'nested-if-wrap';
+    wrap.appendChild(buildIfCardNode(item, {
+      onDelete: ()=>{ list.splice(idx,1); renderSteps(); saveNow(); }
+    }));
+    return wrap;
+  }
+  return buildBranchStepCard(list, item, idx);
+}
+
+function buildBranchStepCard(list, bstep, bidx){
   const card = document.createElement('div');
   card.className = 'branch-step' + (bstep.done ? ' done' : '');
   const check = document.createElement('div');
@@ -1417,7 +1471,7 @@ function buildBranchStepCard(step, key, bstep, bidx){
   setTimeout(autoGrow, 0);
   const del = document.createElement('button');
   del.className = 'branch-step-del'; del.textContent = '✕';
-  del.onclick = ()=>{ step.branches[key].splice(bidx,1); renderSteps(); saveNow(); };
+  del.onclick = ()=>{ list.splice(bidx,1); renderSteps(); saveNow(); };
   card.append(check, ta, del);
   return card;
 }
@@ -2054,15 +2108,22 @@ function buildIfExportCard(step){
     label.textContent = (step.labels && step.labels[key]) || (key==='yes' ? 'はい' : 'いいえ');
     col.appendChild(label);
     const list = (step.branches && step.branches[key]) || [];
-    list.forEach(bstep=>{
+    list.forEach(item=>{
+      if(item.type==='if'){
+        const wrap = document.createElement('div');
+        wrap.className = 'nested-if-wrap';
+        wrap.appendChild(buildIfExportCard(item));
+        col.appendChild(wrap);
+        return;
+      }
       const bcard = document.createElement('div');
-      bcard.className = 'branch-step' + (bstep.done ? ' done' : '');
+      bcard.className = 'branch-step' + (item.done ? ' done' : '');
       const check = document.createElement('div');
       check.className = 'check-btn';
-      check.textContent = bstep.done ? '✓' : '';
+      check.textContent = item.done ? '✓' : '';
       const text = document.createElement('div');
       text.className = 'branch-step-text-static';
-      text.textContent = bstep.text || '(空の工程)';
+      text.textContent = item.text || '(空の工程)';
       bcard.append(check, text);
       col.appendChild(bcard);
     });
@@ -2243,11 +2304,11 @@ function fitBoardForStickers(boardNode, cb){
     maxY = Math.max(maxY, st.y + size);
   });
   const rect = boardNode.getBoundingClientRect();
-  if(maxY + 40 > rect.height){
-    boardNode.style.minHeight = (maxY+40)+'px';
+  if(maxY > rect.height){
+    boardNode.style.minHeight = (maxY + 16)+'px';
   }
-  if(maxX + 40 > rect.width){
-    boardNode.style.width = (maxX+40)+'px';
+  if(maxX > rect.width){
+    boardNode.style.width = (maxX + 16)+'px';
   }
 }
 document.getElementById('shotBtn').addEventListener('click', async ()=>{
