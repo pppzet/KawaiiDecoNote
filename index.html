@@ -63,6 +63,10 @@
     position:absolute; top:8px; right:34px; width:22px;height:22px; border-radius:50%;
     background:rgba(255,255,255,0.55); color:#5b4d70; border:none; font-size:11px; cursor:pointer;
   }
+  .cover-card .cover-copy{
+    position:absolute; top:8px; right:60px; width:22px;height:22px; border-radius:50%;
+    background:rgba(255,255,255,0.55); color:#5b4d70; border:none; font-size:11px; cursor:pointer;
+  }
   .cover-add{
     aspect-ratio:3/4; border-radius:16px; border:2px dashed rgba(155,130,180,.5);
     display:flex; align-items:center; justify-content:center; flex-direction:column; gap:6px;
@@ -110,6 +114,11 @@
   .board-tab-del{
     position:absolute; top:-7px; right:-7px; width:17px;height:17px; border-radius:50%;
     background:var(--rose); color:#fff; font-size:10px; display:flex;align-items:center;justify-content:center;
+    border:none; cursor:pointer; line-height:1;
+  }
+  .board-tab-copy{
+    position:absolute; top:-7px; right:16px; width:17px;height:17px; border-radius:50%;
+    background:var(--lavender); color:#fff; font-size:9px; display:flex;align-items:center;justify-content:center;
     border:none; cursor:pointer; line-height:1;
   }
   .board-tab-add{
@@ -439,6 +448,7 @@
     background:transparent; box-shadow:none; border-bottom:2px solid #3a3a3a; color:#222;
   }
   .notestyle-mode .board-tab-del{ background:#999; }
+  .notestyle-mode .board-tab-copy{ background:#777; }
   .notestyle-mode .board-tab-add{
     border:1px solid #ccc; background:#fff; color:#777; border-radius:6px;
   }
@@ -945,13 +955,18 @@ function renderCoverScreen(){
     edit.className = 'cover-edit';
     edit.textContent = '✏️';
     edit.onclick = (e)=>{ e.stopPropagation(); renameNotebook(nb.id); };
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'cover-copy';
+    copyBtn.textContent = '📄';
+    copyBtn.title = 'この手帳をコピー';
+    copyBtn.onclick = (e)=>{ e.stopPropagation(); duplicateNotebook(nb.id); };
     const del = document.createElement('button');
     del.className = 'cover-del';
     del.textContent = '✕';
     del.onclick = (e)=>{ e.stopPropagation(); deleteNotebook(nb.id); };
     const nameDiv = document.createElement('div');
     nameDiv.textContent = nb.name || (nb.type==='notestyle' ? '無題のノート' : '無題のプロフィール帳');
-    card.append(badge, edit, del, nameDiv);
+    card.append(badge, edit, copyBtn, del, nameDiv);
     card.onclick = ()=> openNotebook(nb.id);
     coverGrid.appendChild(card);
   });
@@ -1023,6 +1038,21 @@ function renameNotebook(id){
   nb.name = newName.trim();
   renderTop();
   saveNow();
+}
+function duplicateNotebook(id){
+  const nb = state.notebooks.find(n=>n.id===id);
+  if(!nb) return;
+  const clone = JSON.parse(JSON.stringify(nb));
+  clone.id = newId();
+  const baseName = nb.name || (nb.type==='notestyle' ? '無題のノート' : '無題のプロフィール帳');
+  clone.name = baseName + 'のコピー';
+  const origActiveIdx = nb.pages.findIndex(p=>p.id===nb.activePageId);
+  clone.pages.forEach(p=>{ p.id = newId(); });
+  clone.activePageId = (clone.pages[origActiveIdx>=0 ? origActiveIdx : 0] || clone.pages[0]).id;
+  state.notebooks.push(clone);
+  renderTop();
+  saveNow();
+  showToast('手帳をコピーしたよ📔✨');
 }
 document.getElementById('backBtn').addEventListener('click', ()=>{
   state.activeNotebookId = null;
@@ -1140,6 +1170,11 @@ function renderTabs(){
     tab.appendChild(label);
     tab.onclick = ()=> setActiveBoard(p.id);
     if(p.id===nb.activePageId){
+      const copyBtn = document.createElement('button');
+      copyBtn.className='board-tab-copy'; copyBtn.textContent='📄';
+      copyBtn.title = 'このページをコピー';
+      copyBtn.onclick = (e)=>{ e.stopPropagation(); duplicateBoard(p.id); };
+      tab.appendChild(copyBtn);
       const del = document.createElement('button');
       del.className='board-tab-del'; del.textContent='✕';
       del.onclick = (e)=>{ e.stopPropagation(); deleteBoard(p.id); };
@@ -1200,6 +1235,21 @@ function deleteBoard(id){
   connectMode = false; connectFromId = null;
   render();
   saveNow();
+}
+function duplicateBoard(id){
+  const nb = currentNotebook();
+  const idx = nb.pages.findIndex(p=>p.id===id);
+  if(idx<0) return;
+  const original = nb.pages[idx];
+  const clone = JSON.parse(JSON.stringify(original));
+  clone.id = newId();
+  clone.title = original.title ? (original.title + 'のコピー') : '';
+  nb.pages.splice(idx+1, 0, clone);
+  nb.activePageId = clone.id;
+  connectMode = false; connectFromId = null;
+  render();
+  saveNow();
+  showToast('ページをコピーしたよ📄✨');
 }
 
 function renderFrame(){
