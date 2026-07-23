@@ -267,14 +267,12 @@
   .if-card .if-card .if-card{ background:#f2f8ff; border-color:#a3c9e0; }
   .if-card .if-card .if-branches{ gap:6px; }
   .if-card .if-card .if-branch{ padding:6px; }
-  /* PC・タブレットなど横幅に余裕がある画面だけ、最上段のif分岐を左右並びにする */
+  /* if分岐の「はい/いいえ」は画面幅やネストの深さに関わらず常に縦1カラム積みにする
+     （横幅で2カラム表示にすると、横持ちスマホやモバイルモニターなど画面幅はあるが
+     実際の表示領域が限られる環境でネストが崩れてしまうため、モバイル版と同じ
+     見た目で統一する） */
   @media (min-width:600px){
     .if-card{ max-width:480px; }
-    .if-branches{ flex-direction:row; gap:10px; }
-    .if-branch{ flex:1; min-width:0; width:auto; }
-    /* 入れ子(2段目以降)は横幅が足りなくなるので、PCでも縦積みのままにする */
-    .if-card .if-card > .if-branches{ flex-direction:column; }
-    .if-card .if-card > .if-branches > .if-branch{ flex:none; width:100%; }
   }
   .if-cond-text-static{
     flex:1; min-width:0; font-family:'M PLUS Rounded 1c', sans-serif; font-size:14px; color:var(--ink);
@@ -581,6 +579,12 @@
     <svg class="tray-item" data-type="heart" viewBox="0 0 44 44"></svg>
     <svg class="tray-item" data-type="ribbon" viewBox="0 0 44 44"></svg>
     <svg class="tray-item" data-type="sparkle" viewBox="0 0 44 44"></svg>
+    <svg class="tray-item" data-type="cloud" viewBox="0 0 44 44"></svg>
+    <svg class="tray-item" data-type="moon" viewBox="0 0 44 44"></svg>
+    <svg class="tray-item" data-type="crown" viewBox="0 0 44 44"></svg>
+    <svg class="tray-item" data-type="butterfly" viewBox="0 0 44 44"></svg>
+    <svg class="tray-item" data-type="paw" viewBox="0 0 44 44"></svg>
+    <svg class="tray-item" data-type="gem" viewBox="0 0 44 44"></svg>
     <div class="tray-divider" id="notestyleTrayDivider" style="display:none;"></div>
     <span id="notestyleTrayExtra" style="display:none;">
       <button class="tray-btn" id="freeformAddText">＋テキスト</button>
@@ -626,7 +630,49 @@ const SVG = {
       <circle cx="22" cy="22" r="5.5" fill="${c2}" stroke="${c1}" stroke-width="1.5"/>
     </g>`,
   sparkle:(c1='#F4D58D')=>`
-    <path d="M22 2 C23 14 24 20 42 22 C24 24 23 30 22 42 C21 30 20 24 2 22 C20 20 21 14 22 2 Z" fill="${c1}"/>`
+    <path d="M22 2 C23 14 24 20 42 22 C24 24 23 30 22 42 C21 30 20 24 2 22 C20 20 21 14 22 2 Z" fill="${c1}"/>`,
+  cloud:(c1='#fff', c2='#B8D8F0')=>`
+    <g>
+      <ellipse cx="14" cy="26" rx="10" ry="8" fill="${c1}" stroke="${c2}" stroke-width="1.2"/>
+      <ellipse cx="24" cy="19" rx="12" ry="10" fill="${c1}" stroke="${c2}" stroke-width="1.2"/>
+      <ellipse cx="33" cy="27" rx="8" ry="7" fill="${c1}" stroke="${c2}" stroke-width="1.2"/>
+      <ellipse cx="22" cy="30" rx="16" ry="8" fill="${c1}" stroke="${c2}" stroke-width="1.2"/>
+    </g>`,
+  moon:(c1='#F4D58D')=>`
+    <g>
+      <path d="M28 6 C18 6 10 14 10 24 C10 34 18 42 28 42 C20 40 15 33 15 24 C15 15 20 8 28 6 Z" fill="${c1}"/>
+      <path d="M35 9 L36.6 13.3 L41 14 L37.7 17 L38.5 21.4 L35 19.1 L31.5 21.4 L32.3 17 L29 14 L33.4 13.3 Z" fill="${c1}"/>
+    </g>`,
+  crown:(c1='#F4D58D', c2='#E8B4BC')=>`
+    <g>
+      <path d="M6 30 L9 13 L17 22 L22 9 L27 22 L35 13 L38 30 Z" fill="${c1}" stroke="#fff" stroke-width="1.2"/>
+      <rect x="6" y="30" width="32" height="6" rx="2" fill="${c1}" stroke="#fff" stroke-width="1.2"/>
+      <circle cx="22" cy="11" r="2.4" fill="${c2}"/>
+      <circle cx="9" cy="15.5" r="2" fill="${c2}"/>
+      <circle cx="35" cy="15.5" r="2" fill="${c2}"/>
+    </g>`,
+  butterfly:(c1='#C9B6E4', c2='#E8B4BC')=>`
+    <g>
+      <path d="M22 22 C15 8 2 8 4 20 C5 28 15 26 22 22 Z" fill="${c1}"/>
+      <path d="M22 22 C29 8 42 8 40 20 C39 28 29 26 22 22 Z" fill="${c1}"/>
+      <path d="M22 22 C17 30 8 34 8 40 C8 44 16 42 22 34 Z" fill="${c2}"/>
+      <path d="M22 22 C27 30 36 34 36 40 C36 44 28 42 22 34 Z" fill="${c2}"/>
+      <line x1="22" y1="9" x2="22" y2="36" stroke="#7a6a90" stroke-width="1.6"/>
+    </g>`,
+  paw:(c1='#E8B4BC')=>`
+    <g>
+      <ellipse cx="22" cy="28" rx="11" ry="9" fill="${c1}"/>
+      <ellipse cx="9" cy="17" rx="5" ry="6" fill="${c1}"/>
+      <ellipse cx="19.5" cy="9" rx="5" ry="6.5" fill="${c1}"/>
+      <ellipse cx="30" cy="9" rx="5" ry="6.5" fill="${c1}"/>
+      <ellipse cx="38" cy="17" rx="5" ry="6" fill="${c1}"/>
+    </g>`,
+  gem:(c1='#A8E6CF', c2='#fff')=>`
+    <g>
+      <path d="M12 16 L22 6 L32 16 L38 18 L22 40 L6 18 Z" fill="${c1}" stroke="${c2}" stroke-width="1.2"/>
+      <path d="M12 16 L32 16 L22 40 Z" fill="${c2}" opacity="0.35"/>
+      <path d="M12 16 L22 6 L32 16" fill="none" stroke="${c2}" stroke-width="1"/>
+    </g>`
 };
 const stickerTypes = Object.keys(SVG);
 
@@ -923,6 +969,26 @@ setInterval(()=>{ if(dirty) flushSave(); }, 8000);
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushSave(); });
 window.addEventListener('beforeunload', ()=>{ if(dirty) flushSave(); });
 window.addEventListener('pagehide', ()=>{ if(dirty) flushSave(); });
+
+/* ---------- 画面幅が変わった時（PC/モバイル切替・外部モニター接続・回転など）に
+   工程・if条件・分岐内テキストの自動高さを再計算する ----------
+   ※ これらのtextareaはJSで高さをpxで固定しているため、resizeイベントを
+   listenしていないと、幅が変わって折り返し行数が増えても高さが更新されず
+   文章が見切れてしまう（if分岐のネストが深いほど発生しやすい） */
+let __autoGrowResizeTimer = null;
+function regrowAllAutoTextareas(){
+  document.querySelectorAll('.step-text, .if-cond-text, .branch-step-text').forEach(ta=>{
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  });
+}
+window.addEventListener('resize', ()=>{
+  clearTimeout(__autoGrowResizeTimer);
+  __autoGrowResizeTimer = setTimeout(regrowAllAutoTextareas, 120);
+});
+if(document.fonts && document.fonts.ready){
+  document.fonts.ready.then(()=>{ setTimeout(regrowAllAutoTextareas, 0); });
+}
 
 /* ---------- top-level: cover screen vs notebook view ---------- */
 function renderTop(){
